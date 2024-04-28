@@ -22,7 +22,7 @@ class SteamHandler:
 
 inten = discord.Intents.default()
 inten.message_content = True
-bot = commands.Bot(command_prefix=commands.when_mentioned, intents=inten)
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=inten)
 steam = SteamHandler(STEAM_TOKEN)
 
 @bot.event
@@ -61,5 +61,46 @@ async def roulette(ctx: commands.Context, steam_ids: commands.Greedy[int]):
 
     selected_game = random.choice(filtered_games)
     await ctx.reply(f'Play {selected_game}!')
+
+@bot.command()
+async def games(ctx: commands.Context, steam_ids: commands.Greedy[int]):
+    if len(steam_ids) < 1:
+        await ctx.send("Fuck OFF")
+        return
+    if len(steam_ids) == 1:
+        try:
+            games = await steam.get_games_by_id(steam_ids[0])
+        except Exception:
+            await ctx.send("No games found")
+            return
+        mess = f'Games: {", ".join(games)}'
+        if len(mess):
+            await ctx.send(f"Bitch you got to many games, here is the amount but I ain't listin em: {len(games)}")
+        else:
+            await ctx.send(f'Games: {", ".join(games)}')
+        return
+    else:
+        filtered_games = []
+
+        someone_messed_up_the_fun = None
+
+        for id in steam_ids:
+            try:
+                games = await steam.get_games_by_id(id)
+            except Exception as e:
+                someone_messed_up_the_fun = id
+                continue
+            if not games:
+                someone_messed_up_the_fun = id
+                continue
+            if len(filtered_games) == 0 and not someone_messed_up_the_fun:
+                filtered_games = games
+                continue
+            filtered_games = list(set(filtered_games) & set(games))
+        
+        if someone_messed_up_the_fun:
+            await ctx.send(f"Couldn't find games for {someone_messed_up_the_fun}")
+
+        await ctx.send(f'Games You have together: {", ".join(filtered_games)}')
 
 bot.run(BOT_TOKEN)
